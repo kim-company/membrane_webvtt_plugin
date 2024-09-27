@@ -119,7 +119,7 @@ defmodule Membrane.WebVTT.SegmentFilter do
       %Buffer{
         pts: unnanos(segment_start),
         payload: webvtt,
-        metadata: %{to: unnanos(segment_end)}
+        metadata: %{to: unnanos(segment_end), duration: unnanos(segment_end - segment_start)}
       }}}
   end
 

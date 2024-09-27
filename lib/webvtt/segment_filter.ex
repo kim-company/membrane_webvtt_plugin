@@ -119,8 +119,8 @@ defmodule Membrane.WebVTT.SegmentFilter do
   defp buffer_to_cue(buffer) do
     %Subtitle.Cue{
       text: buffer.payload,
-      from: Time.milliseconds(buffer.pts),
-      to: Time.milliseconds(buffer.metadata.to)
+      from: Time.as_milliseconds(buffer.pts, :round),
+      to: Time.as_milliseconds(buffer.metadata.to, :round)
     }
   end
 end

@@ -20,7 +20,7 @@ defmodule Membrane.WebVTT.SegmentFilter do
 
   defmodule State do
     defstruct duration: nil,
-              segment_start: 0,
+              segment_start: nil,
               segment_end: nil,
               buffers: [],
               headers: []
@@ -28,17 +28,19 @@ defmodule Membrane.WebVTT.SegmentFilter do
 
   @impl true
   def handle_init(_ctc, options) do
-    {[],
-     %State{
-       duration: options.segment_duration,
-       segment_end: options.segment_duration,
-       headers: options.headers
-     }}
+    {[], %State{duration: options.segment_duration, headers: options.headers}}
   end
 
   @impl true
+  def handle_buffer(:input, %Buffer{} = buffer, ctx, %State{segment_start: nil} = state) do
+    handle_buffer(:input, buffer, ctx, %State{
+      state
+      | segment_start: buffer.pts,
+        segment_end: buffer.pts + state.duration
+    })
+  end
+
   def handle_buffer(:input, %Buffer{} = buffer, _ctx, %State{} = state) do
-    # Convert timestamps
     add_buffer(state, buffer)
   end
 

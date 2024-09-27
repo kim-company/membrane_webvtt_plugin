@@ -12,18 +12,23 @@ defmodule Membrane.WebVTT.SegmentFilter do
     availability: :always,
     accepted_format: Membrane.Text
 
-  def_options segment_duration: [spec: Time.t(), default: Time.seconds(6)]
+  def_options segment_duration: [spec: Time.t(), default: Time.seconds(6)],
+              headers: [
+                spec: [%WebVTT.HeaderLine{}],
+                default: [%Subtitle.WebVTT.HeaderLine{key: :description, original: "WEBVTT"}]
+              ]
 
   defmodule State do
     defstruct duration: nil,
               segment_start: nil,
               segment_end: nil,
-              buffers: []
+              buffers: [],
+              headers: []
   end
 
   @impl true
   def handle_init(_ctc, options) do
-    {[], %State{duration: nanos(options.segment_duration)}}
+    {[], %State{duration: nanos(options.segment_duration), headers: options.headers}}
   end
 
   @impl true
@@ -49,7 +54,10 @@ defmodule Membrane.WebVTT.SegmentFilter do
   def handle_end_of_stream(_, _ctx, %State{} = state) do
     if state.buffers != [] do
       last = hd(state.buffers)
-      segment = build_output_buffer(state.buffers, state.segment_start, last.metadata.to)
+
+      segment =
+        build_output_buffer(state.buffers, state.headers, state.segment_start, last.metadata.to)
+
       {[segment | [end_of_stream: :output]], state}
     else
       {[end_of_stream: :output], state}
@@ -68,7 +76,12 @@ defmodule Membrane.WebVTT.SegmentFilter do
       x when x >= 0 ->
         # Flush buffer and advance state to next fragment
         segment =
-          build_output_buffer([buffer | state.buffers], state.segment_start, state.segment_end)
+          build_output_buffer(
+            [buffer | state.buffers],
+            state.headers,
+            state.segment_start,
+            state.segment_end
+          )
 
         state = %State{
           state
@@ -94,20 +107,12 @@ defmodule Membrane.WebVTT.SegmentFilter do
   defp nanos(time), do: Time.as_nanoseconds(time, :round)
   defp unnanos(time), do: Time.nanoseconds(time)
 
-  defp build_output_buffer(buffers, segment_start, segment_end) do
+  defp build_output_buffer(buffers, headers, segment_start, segment_end) do
     cues =
       buffers
       |> Enum.reverse()
       |> Enum.reject(&(&1.payload == ""))
       |> Enum.map(&buffer_to_cue/1)
-
-    headers = [
-      %Subtitle.WebVTT.HeaderLine{key: :description, original: "WEBVTT"},
-      %Subtitle.WebVTT.HeaderLine{
-        key: :x_timestamp_map,
-        original: "X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000"
-      }
-    ]
 
     webvtt =
       %Subtitle.WebVTT{cues: cues, header: headers}

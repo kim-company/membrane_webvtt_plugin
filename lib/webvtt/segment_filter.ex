@@ -20,7 +20,7 @@ defmodule Membrane.WebVTT.SegmentFilter do
 
   defmodule State do
     defstruct duration: nil,
-              segment_start: nil,
+              segment_start: 0,
               segment_end: nil,
               buffers: [],
               headers: []
@@ -28,25 +28,17 @@ defmodule Membrane.WebVTT.SegmentFilter do
 
   @impl true
   def handle_init(_ctc, options) do
-    {[], %State{duration: nanos(options.segment_duration), headers: options.headers}}
+    {[],
+     %State{
+       duration: options.segment_duration,
+       segment_end: options.segment_duration,
+       headers: options.headers
+     }}
   end
 
   @impl true
-  def handle_buffer(:input, %Buffer{} = buffer, ctx, %State{segment_start: nil} = state) do
-    start = nanos(buffer.pts)
-
-    handle_buffer(:input, buffer, ctx, %State{
-      state
-      | segment_start: start,
-        segment_end: start + state.duration
-    })
-  end
-
   def handle_buffer(:input, %Buffer{} = buffer, _ctx, %State{} = state) do
     # Convert timestamps
-    buffer = update_in(buffer.metadata.to, &nanos/1)
-    buffer = update_in(buffer.pts, &nanos/1)
-
     add_buffer(state, buffer)
   end
 
@@ -103,10 +95,6 @@ defmodule Membrane.WebVTT.SegmentFilter do
     end
   end
 
-  defp millis(time), do: Time.as_milliseconds(time, :round)
-  defp nanos(time), do: Time.as_nanoseconds(time, :round)
-  defp unnanos(time), do: Time.nanoseconds(time)
-
   defp build_output_buffer(buffers, headers, segment_start, segment_end) do
     cues =
       buffers
@@ -122,17 +110,17 @@ defmodule Membrane.WebVTT.SegmentFilter do
     {:buffer,
      {:output,
       %Buffer{
-        pts: unnanos(segment_start),
+        pts: segment_start,
         payload: webvtt,
-        metadata: %{to: unnanos(segment_end), duration: unnanos(segment_end - segment_start)}
+        metadata: %{to: segment_end, duration: segment_end - segment_start}
       }}}
   end
 
   defp buffer_to_cue(buffer) do
     %Subtitle.Cue{
       text: buffer.payload,
-      from: millis(buffer.pts),
-      to: millis(buffer.metadata.to)
+      from: Time.milliseconds(buffer.pts),
+      to: Time.milliseconds(buffer.metadata.to)
     }
   end
 end

@@ -50,9 +50,9 @@ defmodule Membrane.WebVTT.SegmentFilter do
     if state.buffers != [] do
       last = hd(state.buffers)
       segment = build_output_buffer(state.buffers, state.segment_start, last.metadata.to)
-      {[segment], state}
+      {[segment | [end_of_stream: :output]], state}
     else
-      {[], state}
+      {[end_of_stream: :output], state}
     end
   end
 

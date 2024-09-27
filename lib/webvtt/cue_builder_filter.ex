@@ -48,7 +48,7 @@ defmodule Membrane.WebVTT.CueBuilderFilter do
     {builder, cues} =
       if cue.text == "" do
         {builder, flushed_cue} = Builder.flush(builder)
-        {builder, [flushed_cue, cue]}
+        {builder, List.wrap(flushed_cue) ++ [cue]}
       else
         Builder.put_and_get(builder, cue)
       end

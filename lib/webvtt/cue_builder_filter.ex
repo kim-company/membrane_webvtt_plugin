@@ -23,7 +23,7 @@ defmodule Membrane.WebVTT.CueBuilderFilter do
         [
           max_length: options.max_length,
           min_duration:
-            options.min_duration && Time.as_microseconds(options.min_duration, :round),
+            options.min_duration && Time.as_milliseconds(options.min_duration, :round),
           max_lines: options.max_lines
         ],
         &elem(&1, 1)

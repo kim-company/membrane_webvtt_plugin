@@ -1,21 +1,10 @@
-# MembraneWebvttPlugin
-
-**TODO: Add description**
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `membrane_webvtt_plugin` to your list of dependencies in `mix.exs`:
+# Membrane.WebVTT.Plugin
+Filter for formatting and segmenting WebVTT cues.
 
 ```elixir
 def deps do
   [
-    {:membrane_webvtt_plugin, "~> 0.1.0"}
+    {:membrane_webvtt_plugin, "~> 1.0.0"}
   ]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/membrane_webvtt_plugin>.
-

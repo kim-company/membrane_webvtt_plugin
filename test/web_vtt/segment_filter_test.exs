@@ -2,7 +2,6 @@ defmodule Membrane.WebVTT.SegmentFilterTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
-  import Membrane.Testing.Assertions
   import AssertValue
   alias Membrane.Buffer
   alias Membrane.WebVTT.SegmentFilter
@@ -71,6 +70,20 @@ defmodule Membrane.WebVTT.SegmentFilterTest do
                    %{cues: [%Subtitle.Cue{from: 2, to: 3, text: "0", id: ""}], from: 0, to: 6},
                    %{cues: [], from: 6, to: 12},
                    %{cues: [%Subtitle.Cue{from: 13, to: 14, text: "1", id: ""}], from: 12, to: 18}
+                 ]
+  end
+
+  test "empty buffers forward the segment but are not added to its contents" do
+    segments = segment_cues([%{from: 7, to: 8, payload: ""}])
+    assert_value segments == [%{cues: [], from: 0, to: 6}, %{cues: [], from: 6, to: 12}]
+  end
+
+  test "empty buffers and proper buffers" do
+    segments = segment_cues([%{from: 7, to: 8, payload: ""}, %{from: 9, to: 10, payload: "abc"}])
+
+    assert_value segments == [
+                   %{cues: [], from: 0, to: 6},
+                   %{cues: [%Subtitle.Cue{from: 9, to: 10, text: "abc", id: ""}], from: 6, to: 12}
                  ]
   end
 

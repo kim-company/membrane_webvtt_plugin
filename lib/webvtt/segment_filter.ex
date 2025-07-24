@@ -17,6 +17,12 @@ defmodule Membrane.WebVTT.SegmentFilter do
                 spec: [%WebVTT.HeaderLine{}],
                 default: [%Subtitle.WebVTT.HeaderLine{key: :description, original: "WEBVTT"}]
               ],
+              omit_repetition: [
+                spec: boolean(),
+                default: false,
+                description:
+                  "When true, cues that span across segment boundaries are not repeated in both segments"
+              ],
               resume: [
                 spec: boolean(),
                 default: false,
@@ -33,6 +39,7 @@ defmodule Membrane.WebVTT.SegmentFilter do
 
     {[],
      %{
+       omit_repetition: opts.omit_repetition,
        segment_duration: opts.segment_duration,
        headers: opts.headers,
        segment: segment
@@ -110,6 +117,41 @@ defmodule Membrane.WebVTT.SegmentFilter do
       |> Enum.map(&segment_to_buffer(&1, state))
 
     {buffers, state}
+  end
+
+  defp put_and_get(state = %{omit_repetition: true}, buffer, acc) do
+    segment = state.segment
+    from = buffer.pts
+    to = buffer.metadata.to
+
+    cond do
+      # The buffer starts after. Forward.
+      from >= segment.to ->
+        state
+        |> next_segment()
+        |> put_and_get(buffer, [segment | acc])
+
+      # The buffer starts here and ends in the next segment, meaning we have
+      # to store the buffer and proceed to the next segment.
+      from >= segment.from and to > segment.to ->
+        segment = update_in(segment, [:queue], fn q -> :queue.in(buffer, q) end)
+
+        state
+        |> next_segment()
+        |> put_and_get(nil, [segment | acc])
+
+      # Buffer starts and ends here, we shall not proceed to the next segment.
+      from >= segment.from and to <= segment.to ->
+        state
+        |> update_in([:segment, :queue], fn q -> :queue.in(buffer, q) end)
+        |> put_and_get(nil, acc)
+
+      true ->
+        # The buffer started before this segment and there is nothing we can
+        # do about it. Throw it away.
+        state
+        |> put_and_get(nil, acc)
+    end
   end
 
   defp put_and_get(state, buffer, acc) do

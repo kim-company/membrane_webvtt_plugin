@@ -41,6 +41,18 @@ defmodule Membrane.WebVTT.SegmentFilterTest do
                  ]
   end
 
+  test "buffer is not repeated when omit_repetition is enabled" do
+    segments =
+      [%{from: 2, to: 8}]
+      |> generate_cues()
+      |> segment_cues(true)
+
+    assert_value segments == [
+                   %{cues: [%Subtitle.Cue{from: 2, to: 8, text: "0", id: ""}], from: 0, to: 6},
+                   %{cues: [], from: 6, to: 12}
+                 ]
+  end
+
   test "multiple buffers" do
     segments =
       [%{from: 2, to: 4}, %{from: 4, to: 7}]
@@ -95,7 +107,7 @@ defmodule Membrane.WebVTT.SegmentFilterTest do
     end)
   end
 
-  defp segment_cues(cues) do
+  defp segment_cues(cues, omit_repetition \\ false) do
     buffers =
       Enum.map(cues, fn %{from: from, to: to, payload: payload} ->
         %Buffer{
@@ -110,7 +122,9 @@ defmodule Membrane.WebVTT.SegmentFilterTest do
         output: buffers,
         stream_format: %Membrane.Text{}
       })
-      |> child(:filter, SegmentFilter)
+      |> child(:filter, %SegmentFilter{
+        omit_repetition: omit_repetition
+      })
       |> child(:sink, %Membrane.Testing.Sink{})
     ]
 

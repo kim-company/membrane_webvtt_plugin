@@ -17,81 +17,69 @@ defmodule Membrane.WebVTT.SegmentFilterTest do
                  ]
   end
 
-  test "buffer is in the second segment" do
-    segments =
-      [%{from: 6, to: 8}]
-      |> generate_cues()
-      |> segment_cues()
-
-    assert_value segments == [
-                   %{cues: [], from: 0, to: 6},
-                   %{cues: [%Subtitle.Cue{from: 6, to: 8, text: "0", id: ""}], from: 6, to: 12}
-                 ]
-  end
-
   test "buffer spans across multiple segments" do
     segments =
-      [%{from: 2, to: 8}]
+      [%{from: 0, to: 8}]
       |> generate_cues()
       |> segment_cues()
 
     assert_value segments == [
-                   %{cues: [%Subtitle.Cue{from: 2, to: 8, text: "0", id: ""}], from: 0, to: 6},
-                   %{cues: [%Subtitle.Cue{from: 2, to: 8, text: "0", id: ""}], from: 6, to: 12}
+                   %{cues: [%Subtitle.Cue{from: 0, to: 6, text: "0", id: ""}], from: 0, to: 6},
+                   %{cues: [%Subtitle.Cue{from: 6, to: 8, text: "0", id: ""}], from: 6, to: 12}
                  ]
   end
 
   test "buffer is not repeated when omit_repetition is enabled" do
     segments =
-      [%{from: 2, to: 8}]
+      [%{from: 0, to: 8}]
       |> generate_cues()
       |> segment_cues(true)
 
     assert_value segments == [
-                   %{cues: [%Subtitle.Cue{from: 2, to: 8, text: "0", id: ""}], from: 0, to: 6},
+                   %{cues: [%Subtitle.Cue{from: 0, to: 8, text: "0", id: ""}], from: 0, to: 6},
                    %{cues: [], from: 6, to: 12}
                  ]
   end
 
   test "multiple buffers" do
     segments =
-      [%{from: 2, to: 4}, %{from: 4, to: 7}]
+      [%{from: 0, to: 4}, %{from: 4, to: 7}]
       |> generate_cues()
       |> segment_cues()
 
     assert_value segments == [
                    %{
                      cues: [
-                       %Subtitle.Cue{from: 2, to: 4, text: "0", id: ""},
-                       %Subtitle.Cue{from: 4, to: 7, text: "1", id: ""}
+                       %Subtitle.Cue{from: 0, to: 4, text: "0", id: ""},
+                       %Subtitle.Cue{from: 4, to: 6, text: "1", id: ""}
                      ],
                      from: 0,
                      to: 6
                    },
-                   %{cues: [%Subtitle.Cue{from: 4, to: 7, text: "1", id: ""}], from: 6, to: 12}
+                   %{cues: [%Subtitle.Cue{from: 6, to: 7, text: "1", id: ""}], from: 6, to: 12}
                  ]
   end
 
   test "buffers with empty segment in between" do
     segments =
-      [%{from: 2, to: 3}, %{from: 13, to: 14}]
+      [%{from: 0, to: 3}, %{from: 13, to: 14}]
       |> generate_cues()
       |> segment_cues()
 
     assert_value segments == [
-                   %{cues: [%Subtitle.Cue{from: 2, to: 3, text: "0", id: ""}], from: 0, to: 6},
+                   %{cues: [%Subtitle.Cue{from: 0, to: 3, text: "0", id: ""}], from: 0, to: 6},
                    %{cues: [], from: 6, to: 12},
                    %{cues: [%Subtitle.Cue{from: 13, to: 14, text: "1", id: ""}], from: 12, to: 18}
                  ]
   end
 
   test "empty buffers forward the segment but are not added to its contents" do
-    segments = segment_cues([%{from: 7, to: 8, payload: ""}])
+    segments = segment_cues([%{from: 0, to: 8, payload: ""}])
     assert_value segments == [%{cues: [], from: 0, to: 6}, %{cues: [], from: 6, to: 12}]
   end
 
   test "empty buffers and proper buffers" do
-    segments = segment_cues([%{from: 7, to: 8, payload: ""}, %{from: 9, to: 10, payload: "abc"}])
+    segments = segment_cues([%{from: 0, to: 8, payload: ""}, %{from: 9, to: 10, payload: "abc"}])
 
     assert_value segments == [
                    %{cues: [], from: 0, to: 6},

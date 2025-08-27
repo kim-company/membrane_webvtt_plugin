@@ -23,26 +23,22 @@ defmodule Membrane.WebVTT.SegmentFilter do
                 description:
                   "When true, cues that span across segment boundaries are not repeated in both segments"
               ],
-              resume: [
+              relative_mpeg_ts_timestamps: [
                 spec: boolean(),
                 default: false,
                 description:
-                  "When true, the first segment emitted is the one that cat fit the first buffer received. If false, emits segments from 0"
+                  "If true, each segment will have a X-TIMESTAMP-MAP header and its contents will be relative to that timing."
               ]
 
   @impl true
   def handle_init(_ctc, opts) do
-    segment =
-      unless opts.resume do
-        new_segment(0, opts.segment_duration)
-      end
-
     {[],
      %{
        omit_repetition: opts.omit_repetition,
        segment_duration: opts.segment_duration,
+       relative_mpeg_ts_timestamps: opts.relative_mpeg_ts_timestamps,
        headers: opts.headers,
-       segment: segment
+       segment: nil
      }}
   end
 
@@ -50,8 +46,7 @@ defmodule Membrane.WebVTT.SegmentFilter do
   def handle_buffer(:input, buffer, ctx, state = %{segment: nil}) do
     # If the segment is nil, it means this is the first buffer
     # and the option resume was set.
-    index = div(buffer.pts, state.segment_duration)
-    from = index * state.segment_duration
+    from = buffer.pts
     to = from + state.segment_duration
     segment = new_segment(from, to)
     state = put_in(state, [:segment], segment)
@@ -91,22 +86,69 @@ defmodule Membrane.WebVTT.SegmentFilter do
     put_in(state, [:segment], next)
   end
 
-  defp segment_to_buffer(%{from: from, to: to, queue: queue}, state) do
+  defp segment_to_buffer(%{from: from_ns, to: to_ns, queue: queue}, state) do
+    [from, to] = Enum.map([from_ns, to_ns], &Membrane.Time.as_milliseconds(&1, :round))
+
+    fix_t = fn x ->
+      x
+      |> max(from)
+      |> min(to)
+    end
+
     cues =
       queue
       |> :queue.to_list()
       |> Enum.reject(&(&1.payload == ""))
       |> Enum.map(&buffer_to_cue/1)
+      |> Enum.map(fn x ->
+        if state.omit_repetition do
+          x
+        else
+          # When repeating cues, ensure we cut them at segment's boundaries.
+          x
+          |> update_in([Access.key!(:from)], &fix_t.(&1))
+          |> update_in([Access.key!(:to)], &fix_t.(&1))
+        end
+      end)
+
+    {headers, cues} =
+      if state.relative_mpeg_ts_timestamps do
+        ts = round(from_ns / 1.0e9 * 90_000)
+
+        shift_t = fn x ->
+          max(x - from, 0)
+        end
+
+        headers =
+          state.headers ++
+            [
+              %WebVTT.HeaderLine{
+                key: :x_timestamp_map,
+                original: "X-TIMESTAMP-MAP=MPEGTS:#{ts},LOCAL:00:00:00.000"
+              }
+            ]
+
+        cues =
+          Enum.map(cues, fn x ->
+            x
+            |> update_in([Access.key!(:from)], &shift_t.(&1))
+            |> update_in([Access.key!(:to)], &shift_t.(&1))
+          end)
+
+        {headers, cues}
+      else
+        {state.headers, cues}
+      end
 
     webvtt =
-      %Subtitle.WebVTT{cues: cues, header: state.headers}
+      %Subtitle.WebVTT{cues: cues, header: headers}
       |> WebVTT.marshal!()
       |> to_string()
 
     %Buffer{
-      pts: from,
+      pts: from_ns,
       payload: webvtt,
-      metadata: %{to: to, duration: to - from}
+      metadata: %{to: to_ns, duration: to_ns - from_ns}
     }
   end
 

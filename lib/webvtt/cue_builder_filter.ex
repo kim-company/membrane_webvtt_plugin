@@ -41,8 +41,8 @@ defmodule Membrane.WebVTT.CueBuilderFilter do
       ) do
     cue = %Subtitle.Cue{
       text: sentence,
-      from: Membrane.Time.as_milliseconds(pts, :round),
-      to: Membrane.Time.as_milliseconds(to, :round)
+      from: to_ms_float(pts),
+      to: to_ms_float(to)
     }
 
     {builder, cues} =
@@ -66,9 +66,21 @@ defmodule Membrane.WebVTT.CueBuilderFilter do
     cues
     |> List.wrap()
     |> Enum.map(fn cue ->
-      pts = Time.milliseconds(cue.from)
-      metadata = %{buffer.metadata | to: Time.milliseconds(cue.to)}
+      pts = from_ms_float(cue.from)
+      metadata = %{buffer.metadata | to: from_ms_float(cue.to)}
       {:buffer, {:output, %Buffer{buffer | payload: cue.text, pts: pts, metadata: metadata}}}
     end)
+  end
+
+  defp to_ms_float(ns) do
+    ns
+    |> Membrane.Time.as_milliseconds()
+    |> Ratio.to_float()
+  end
+
+  defp from_ms_float(ms) do
+    (ms * 1.0e6)
+    |> round()
+    |> Membrane.Time.nanoseconds()
   end
 end

@@ -92,7 +92,7 @@ defmodule Membrane.WebVTT.SegmentFilter do
     fix_t = fn x ->
       x
       |> max(from)
-      |> min(to)
+      |> min(to - 1)
     end
 
     cues =

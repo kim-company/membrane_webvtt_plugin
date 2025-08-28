@@ -6,7 +6,7 @@ defmodule Membrane.WebVTT.Plugin.MixProject do
   def project do
     [
       app: :membrane_webvtt_plugin,
-      version: "2.0.1",
+      version: "2.0.2",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       source_url: @github_url,
@@ -30,7 +30,6 @@ defmodule Membrane.WebVTT.Plugin.MixProject do
       {:membrane_core, "~> 1.1"},
       {:membrane_text_format, "~> 1.0"},
       {:kim_subtitle, "~> 0.1"},
-      {:assert_value, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end

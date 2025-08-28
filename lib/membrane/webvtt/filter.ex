@@ -1,4 +1,4 @@
-defmodule Membrane.WebVTT.CueBuilderFilter do
+defmodule Membrane.WebVTT.Filter do
   use Membrane.Filter
 
   alias Membrane.{Buffer, Time}

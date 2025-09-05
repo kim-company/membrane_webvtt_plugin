@@ -1,7 +1,7 @@
 defmodule Membrane.WebVTT.Plugin.MixProject do
   use Mix.Project
 
-  @github_url "https://github.com/kim-company/membrane_webvtt_format"
+  @github_url "https://github.com/kim-company/membrane_webvtt_plugin"
 
   def project do
     [

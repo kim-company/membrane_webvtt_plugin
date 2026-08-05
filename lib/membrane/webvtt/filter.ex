@@ -1,4 +1,12 @@
 defmodule Membrane.WebVTT.Filter do
+  @moduledoc """
+  Formats canonical text into WebVTT cue payloads.
+
+  A buffer carrying `metadata.text_layout: :verbatim` bypasses text formatting. Its payload is
+  emitted unchanged, after any pending canonical cue has been flushed. This allows callers to
+  provide an authored final line layout while retaining automatic formatting for other buffers.
+  """
+
   use Membrane.Filter
 
   alias Membrane.{Buffer, Time}
@@ -33,6 +41,21 @@ defmodule Membrane.WebVTT.Filter do
   end
 
   @impl true
+  def handle_buffer(
+        :input,
+        %Buffer{metadata: %{text_layout: :verbatim}} = buffer,
+        _ctx,
+        {last_buffer, builder}
+      ) do
+    {builder, cue} = Builder.flush(builder)
+
+    actions =
+      build_output_buffers(last_buffer, cue) ++
+        [buffer: {:output, buffer}]
+
+    {actions, {buffer, builder}}
+  end
+
   def handle_buffer(
         :input,
         %Buffer{pts: pts, payload: sentence, metadata: %{to: to}} = buffer,

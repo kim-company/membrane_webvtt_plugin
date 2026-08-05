@@ -43,6 +43,10 @@ defmodule Membrane.WebVTT.FilterTest do
            ]
   end
 
+  test "an empty stream ends without producing a buffer" do
+    assert run_filter([], []) == []
+  end
+
   defp buffer(payload, from, to, metadata \\ %{}) do
     %Buffer{
       pts: Membrane.Time.seconds(from),

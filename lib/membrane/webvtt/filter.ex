@@ -12,17 +12,21 @@ defmodule Membrane.WebVTT.Filter do
   alias Membrane.{Buffer, Time}
   alias Subtitle.Cue.Builder
 
-  def_input_pad :input,
+  def_input_pad(:input,
     availability: :always,
     accepted_format: Membrane.Text
+  )
 
-  def_output_pad :output,
+  def_output_pad(:output,
     availability: :always,
     accepted_format: Membrane.Text
+  )
 
-  def_options max_length: [spec: integer(), default: nil],
-              min_duration: [spec: Time.t(), default: nil],
-              max_lines: [spec: integer(), default: nil]
+  def_options(
+    max_length: [spec: integer(), default: nil],
+    min_duration: [spec: Time.t(), default: nil],
+    max_lines: [spec: integer(), default: nil]
+  )
 
   @impl true
   def handle_init(_ctc, options) do
@@ -85,12 +89,15 @@ defmodule Membrane.WebVTT.Filter do
     {build_output_buffers(last_buffer, cue) ++ [end_of_stream: :output], {last_buffer, builder}}
   end
 
-  defp build_output_buffers(buffer, cues) do
+  defp build_output_buffers(_buffer, nil), do: []
+
+  defp build_output_buffers(%Buffer{} = buffer, cues) do
     cues
     |> List.wrap()
     |> Enum.map(fn cue ->
       pts = from_ms_float(cue.from)
       metadata = %{buffer.metadata | to: from_ms_float(cue.to)}
+
       {:buffer, {:output, %Buffer{buffer | payload: cue.text, pts: pts, metadata: metadata}}}
     end)
   end
